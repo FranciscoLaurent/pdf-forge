@@ -17,12 +17,6 @@
   <img src="https://img.shields.io/github/repo-size/FranciscoLaurent/pdf-forge" alt="Size">
 </p>
 
-<p align="center">
-  <a href="https://star-history.com/#FranciscoLaurent/pdf-forge&Date">
-    <img src="https://api.star-history.com/svg?repos=FranciscoLaurent/pdf-forge&type=Date&theme=default" alt="Star History Chart" width="600">
-  </a>
-</p>
-
 > 🚀 **从需求到成品仅用 3 轮 AI 对话完成开发：核心功能 → 单文件封装 → UI 美化，全程 Vibe Coding 零手写代码。**
 
 一个完全在浏览器本地运行的 PDF 编辑工具，**单 HTML 文件**即可使用，无需服务器、无需安装、无需上传文件，所有操作均在本地完成。
