@@ -1,5 +1,5 @@
-<p align="right">
-  <a href="README.md"><img src="https://img.shields.io/badge/中文-当前页-red?style=for-the-badge" alt="中文"></a>
+<p align="left">
+  <a href="README.md"><img src="https://img.shields.io/badge/中文-中文版-red?style=for-the-badge" alt="中文"></a>
   <a href="README.en.md"><img src="https://img.shields.io/badge/English-Current-blue?style=for-the-badge" alt="English"></a>
   <a href="README.ja.md"><img src="https://img.shields.io/badge/日本語-Japanese-green?style=for-the-badge" alt="日本語"></a>
 </p>
