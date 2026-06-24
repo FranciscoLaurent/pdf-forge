@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Forge — 本地 PDF 编辑器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== PDF Forge — Anthropic 品牌风格 ===== */
+:root {
+    /* Anthropic 品牌色系 */
+    --ink: #141413;             /* 主文字 / 深色背景 */
+    --paper: #faf9f5;           /* 纸张背景 */
+    --paper-warm: #f3f0e6;      /* 暖纸色 */
+    --mid-gray: #b0aea5;        /* 次要元素 */
+    --light-gray: #e8e6dc;      /* 细微背景 */
+    --line: #d8d4c4;            /* 分割线 */
+    --line-soft: #e8e6dc;       /* 柔和分割线 */
+
+    /* 强调色 */
+    --orange: #d97757;          /* 主强调色 - 赤陶橙 */
+    --orange-deep: #c4623f;     /* 深橙 */
+    --orange-soft: #f4e3d8;     /* 柔橙背景 */
+    --blue: #6a9bcc;            /* 次强调色 - 蓝 */
+    --blue-soft: #dde8f2;       /* 柔蓝背景 */
+    --green: #788c5d;           /* 第三强调色 - 鼠尾草绿 */
+    --green-soft: #e2e8d6;      /* 柔绿背景 */
+
+    /* 语义色 */
+    --danger: #b94a3a;
+    --danger-soft: #f5e0db;
+    --success: #788c5d;
+    --warning: #c4934a;
+
+    /* 尺寸 */
+    --topbar-h: 68px;
+    --sidebar-w: 300px;
+    --radius: 4px;
+    --radius-lg: 8px;
+    --thumb-size: 180px;
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-sm: 0 1px 2px rgba(20, 20, 19, 0.04), 0 1px 3px rgba(20, 20, 19, 0.06);
+    --shadow-md: 0 4px 12px rgba(20, 20, 19, 0.06), 0 2px 4px rgba(20, 20, 19, 0.04);
+    --shadow-lg: 0 12px 32px rgba(20, 20, 19, 0.08), 0 4px 8px rgba(20, 20, 19, 0.04);
+    --shadow-orange: 0 4px 16px rgba(217, 119, 87, 0.25);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+    font-family: 'Lora', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    line-height: 1.5;
+}
+
+/* 纸张纹理背景 */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 20% 10%, rgba(217, 119, 87, 0.025), transparent 50%),
+        radial-gradient(circle at 80% 90%, rgba(106, 155, 204, 0.02), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 细微噪点纹理 */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 0;
+    mix-blend-mode: multiply;
+}
+
+/* ===== 顶部工具栏 ===== */
+.topbar {
+    height: var(--topbar-h);
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 28px;
+    position: relative;
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 220px;
+}
+
+.brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--ink);
+    border-radius: var(--radius);
+    position: relative;
+    transition: transform var(--transition);
+}
+
+.brand-mark:hover { transform: rotate(-4deg); }
+
+.brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(217, 119, 87, 0.3));
+    border-radius: var(--radius);
+    pointer-events: none;
+}
+
+.brand-text h1 {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+}
+
+.brand-text span {
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--mid-gray);
+    letter-spacing: 0.01em;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+}
+
+.tool-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--line);
+    margin: 0 10px;
+}
+
+.tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--ink);
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+}
+
+.tool-btn:hover:not(:disabled) {
+    background: var(--light-gray);
+    color: var(--ink);
+}
+
+.tool-btn:disabled {
+    opacity: 0.32;
+    cursor: not-allowed;
+}
+
+.tool-btn.primary {
+    background: var(--orange);
+    color: var(--paper);
+    border-color: var(--orange);
+    box-shadow: var(--shadow-sm);
+    font-weight: 500;
+}
+
+.tool-btn.primary:hover:not(:disabled) {
+    background: var(--orange-deep);
+    border-color: var(--orange-deep);
+    box-shadow: var(--shadow-orange);
+    transform: translateY(-1px);
+}
+
+.tool-btn.primary:disabled {
+    background: var(--light-gray);
+    color: var(--mid-gray);
+    border-color: var(--light-gray);
+    box-shadow: none;
+}
+
+.tool-btn.danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.tool-btn.large {
+    padding: 13px 28px;
+    font-size: 14px;
+}
+
+.tool-btn.small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--paper-warm);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 3px 6px;
+}
+
+.zoom-controls span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    min-width: 42px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.icon-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all var(--transition);
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+.icon-btn:hover { background: var(--light-gray); }
+
+/* ===== 主体区域 ===== */
+.main-area {
+    display: flex;
+    height: calc(100vh - var(--topbar-h));
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--paper-warm);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-section {
+    padding: 22px 22px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.sidebar-section:last-child { border-bottom: none; }
+
+.sidebar-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.sidebar-header h3 {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--mid-gray);
+}
+
+.badge {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.empty-hint {
+    text-align: center;
+    padding: 28px 12px;
+    color: var(--mid-gray);
+}
+
+.empty-hint svg { margin-bottom: 10px; }
+
+.empty-hint p {
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--mid-gray);
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 13px;
+    background: var(--paper);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.file-item:hover {
+    background: var(--paper);
+    border-color: var(--line);
+    box-shadow: var(--shadow-sm);
+}
+
+.file-item.active {
+    background: var(--orange-soft);
+    border-color: var(--orange);
+}
+
+.file-item .file-icon { flex-shrink: 0; color: var(--orange); }
+
+.file-item .file-info { flex: 1; min-width: 0; }
+
+.file-item .file-name {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+}
+
+.file-item .file-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--mid-gray);
+    margin-top: 2px;
+}
+
+.file-item .file-remove {
+    opacity: 0;
+    color: var(--mid-gray);
+    transition: all var(--transition);
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+}
+
+.file-item:hover .file-remove { opacity: 1; }
+.file-item .file-remove:hover { color: var(--danger); }
+
+.stats-panel { display: flex; flex-direction: column; gap: 6px; }
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 13px;
+    background: var(--paper);
+    border-radius: var(--radius);
+    border: 1px solid var(--line-soft);
+}
+
+.stat-row span {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 13px;
+    color: var(--ink);
+    font-style: italic;
+}
+
+.stat-row strong {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--orange);
+    font-feature-settings: "tnum";
+}
+
+.tips-panel { display: flex; flex-direction: column; gap: 9px; }
+
+.tip-item {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 12.5px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+kbd {
+    display: inline-block;
+    padding: 2px 7px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink);
+    min-width: 22px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.sidebar-resize {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background var(--transition);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.sidebar-resize::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1px;
+    height: 100%;
+    background: var(--line);
+}
+
+.sidebar-resize:hover { background: var(--orange-soft); }
+.sidebar-resize:hover::after { background: var(--orange); }
+
+/* ===== 画布区域 ===== */
+.canvas-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 40px;
+    position: relative;
+    background: var(--paper);
+}
+
+.canvas-area.drag-over { background: var(--orange-soft); }
+
+.canvas-area.drag-over::after {
+    content: '松开以加载 PDF 文件';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--orange-deep);
+    pointer-events: none;
+    z-index: 100;
+    background: var(--paper);
+    padding: 24px 40px;
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--orange);
+    box-shadow: var(--shadow-lg);
+}
+
+/* 空状态 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    gap: 18px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.empty-icon {
+    margin-bottom: 4px;
+    animation: float 5s ease-in-out infinite;
+    position: relative;
+}
+
+.empty-icon::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 8px;
+    background: radial-gradient(ellipse, rgba(20,20,19,0.12), transparent 70%);
+    border-radius: 50%;
+    animation: shadowPulse 5s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+@keyframes shadowPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.5; }
+    50% { transform: translateX(-50%) scale(0.85); opacity: 0.3; }
+}
+
+.empty-state h2 {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    line-height: 1.15;
+}
+
+.empty-state h2 .accent {
+    color: var(--orange);
+    font-style: italic;
+    font-family: 'Lora', Georgia, serif;
+    font-weight: 500;
+}
+
+.empty-state p {
+    font-family: 'Lora', Georgia, serif;
+    color: var(--mid-gray);
+    line-height: 1.75;
+    font-size: 15px;
+    max-width: 440px;
+}
+
+.empty-state p em {
+    color: var(--ink);
+    font-style: italic;
+}
+
+.drag-hint {
+    margin-top: 4px;
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--mid-gray);
+}
+
+/* ===== 页面网格 ===== */
+.page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--thumb-size), 1fr));
+    gap: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.page-card {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition);
+    aspect-ratio: 0.75;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-card:hover {
+    border-color: var(--mid-gray);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.page-card.selected {
+    border-color: var(--orange);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow-md);
+}
+
+.page-card.dragging {
+    opacity: 0.4;
+    transform: scale(0.96) rotate(-1deg);
+}
+
+.page-card.drag-over-top {
+    box-shadow: 0 -3px 0 0 var(--orange), var(--shadow-md);
+}
+
+.page-card.drag-over-bottom {
+    box-shadow: 0 3px 0 0 var(--orange), var(--shadow-md);
+}
+
+.page-card .page-preview {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    overflow: hidden;
+    position: relative;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.page-card .page-preview canvas {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+
+.page-card .page-preview .loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--light-gray);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.page-card .page-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--paper-warm);
+    font-size: 11px;
+    min-height: 32px;
+}
+
+.page-card .page-number {
+    font-family: 'Poppins', Arial, sans-serif;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 12px;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+}
+
+.page-card .page-source {
+    color: var(--mid-gray);
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+}
+
+.page-card .page-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.page-card:hover .page-actions { opacity: 1; }
+
+.page-action-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 249, 245, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.page-action-btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+}
+
+.page-action-btn.danger:hover {
+    background: var(--danger);
+    color: var(--paper);
+    border-color: var(--danger);
+}
+
+.page-card .rotate-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--ink);
+    color: var(--orange);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: var(--radius);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    display: none;
+    letter-spacing: 0.02em;
+}
+
+.page-card.rotated .rotate-badge { display: block; }
+
+/* 选中标记 - 角标 */
+.page-card.selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 28px 28px 0;
+    border-color: transparent var(--orange) transparent transparent;
+    z-index: 5;
+}
+
+.page-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    color: var(--paper);
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 6;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+/* ===== 模态框 ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 19, 0.5);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-overlay.active { display: flex; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 760px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-warm);
+}
+
+.modal-header h2 {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+}
+
+.modal-body {
+    padding: 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 28px;
+    border-top: 1px solid var(--line);
+    background: var(--paper-warm);
+}
+
+.insert-step { margin-bottom: 24px; }
+.insert-step:last-child { margin-bottom: 0; }
+
+.step-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.step-label::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+}
+
+.insert-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.source-pages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.source-page-card {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--paper);
+    aspect-ratio: 0.75;
+    box-shadow: var(--shadow-sm);
+}
+
+.source-page-card:hover {
+    border-color: var(--mid-gray);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.source-page-card.selected {
+    border-color: var(--orange);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px var(--orange-soft);
+}
+
+.source-page-card canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #fff;
+}
+
+.source-page-card .source-page-num {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: var(--radius);
+    font-weight: 500;
+}
+
+.source-page-card .check-mark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 24px 24px 0;
+    border-color: transparent var(--orange) transparent transparent;
+    display: none;
+}
+
+.source-page-card .check-mark::after {
+    content: '✓';
+    position: absolute;
+    top: 1px;
+    right: 2px;
+    color: var(--paper);
+    font-size: 10px;
+    font-weight: bold;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+.source-page-card.selected .check-mark { display: block; }
+
+.insert-position-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Lora', Georgia, serif;
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 11px 14px;
+    background: var(--paper-warm);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    transition: all var(--transition);
+}
+
+.radio-label:hover {
+    background: var(--light-gray);
+    border-color: var(--line);
+}
+
+.radio-label input { accent-color: var(--orange); }
+
+/* ===== Toast 通知 ===== */
+.toast-container {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px 20px;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius);
+    color: var(--paper);
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+    min-width: 260px;
+    letter-spacing: -0.005em;
+}
+
+.toast.success { background: var(--green); border-color: var(--green); }
+.toast.error { background: var(--danger); border-color: var(--danger); }
+.toast.info { background: var(--ink); border-color: var(--ink); }
+.toast.warning { background: var(--warning); border-color: var(--warning); color: var(--ink); }
+
+.toast .toast-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+@keyframes toastIn {
+    from { transform: translateX(110%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.removing { animation: toastOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+@keyframes toastOut { to { transform: translateX(110%); opacity: 0; } }
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 5px;
+    border: 2px solid var(--paper);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--mid-gray); }
+
+.sidebar::-webkit-scrollbar-thumb { border-color: var(--paper-warm); }
+
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+    .toolbar { gap: 2px; }
+    .tool-btn span { display: none; }
+    .brand-text { display: none; }
+    :root { --thumb-size: 140px; }
+    .canvas-area { padding: 20px; }
+    .topbar { padding: 0 16px; gap: 12px; }
+}
+</style>
+</head>
+<body>
+    <!-- 顶部工具栏 -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">
+                <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+                    <path d="M9 8h6a3 3 0 0 1 0 6H9V8zm0 6v6m0-3h4m-4 3l3 3" stroke="#d97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>PDF Forge</h1>
+                <span>本地 PDF 编辑器</span>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button class="tool-btn" id="btnOpen" title="打开 PDF 文件">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"/></svg>
+                <span>打开 PDF</span>
+            </button>
+            <button class="tool-btn" id="btnInsert" title="从其他 PDF 插入页面">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14m-7-7h14"/></svg>
+                <span>插入页面</span>
+            </button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn danger" id="btnDelete" disabled title="删除选中页面">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                <span>删除</span>
+            </button>
+            <button class="tool-btn" id="btnRotate" disabled title="旋转选中页面">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>
+                <span>旋转</span>
+            </button>
+            <button class="tool-btn" id="btnDuplicate" disabled title="复制选中页面">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span>复制</span>
+            </button>
+            <button class="tool-btn" id="btnExtract" disabled title="提取选中页面为新 PDF">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>提取</span>
+            </button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" id="btnSelectAll" disabled title="全选 / 取消全选">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
+                <span>全选</span>
+            </button>
+            <button class="tool-btn" id="btnReverse" disabled title="反转选中页面顺序">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                <span>反转</span>
+            </button>
+        </div>
+
+        <div class="topbar-right">
+            <div class="zoom-controls">
+                <button class="icon-btn" id="btnZoomOut" title="缩小缩略图">−</button>
+                <span id="zoomLevel">100%</span>
+                <button class="icon-btn" id="btnZoomIn" title="放大缩略图">+</button>
+            </div>
+            <button class="tool-btn primary" id="btnExport" disabled title="导出编辑后的 PDF">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                <span>导出 PDF</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="main-area">
+        <!-- 左侧文件面板 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>已打开的文件</h3>
+                    <span class="badge" id="fileCount">0</span>
+                </div>
+                <div class="file-list" id="fileList">
+                    <div class="empty-hint">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                        <p>点击「打开 PDF」<br>或拖放文件到此处</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>页面统计</h3>
+                </div>
+                <div class="stats-panel" id="statsPanel">
+                    <div class="stat-row"><span>总页数</span><strong id="statTotal">0</strong></div>
+                    <div class="stat-row"><span>已选中</span><strong id="statSelected">0</strong></div>
+                    <div class="stat-row"><span>文件数</span><strong id="statFiles">0</strong></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>操作提示</h3>
+                </div>
+                <div class="tips-panel">
+                    <div class="tip-item"><kbd>点击</kbd> 选中页面</div>
+                    <div class="tip-item"><kbd>Shift+点击</kbd> 多选</div>
+                    <div class="tip-item"><kbd>拖动</kbd> 调整顺序</div>
+                    <div class="tip-item"><kbd>Del</kbd> 删除选中</div>
+                    <div class="tip-item"><kbd>Ctrl+A</kbd> 全选</div>
+                    <div class="tip-item"><kbd>Ctrl+S</kbd> 导出 PDF</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 缩放条拖动把手 -->
+        <div class="sidebar-resize" id="sidebarResize"></div>
+
+        <!-- 页面画布区 -->
+        <section class="canvas-area" id="canvasArea">
+            <!-- 空状态 -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#d97757" stroke-width="1.1">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                        <path d="M9 13h6M9 17h4" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h2>开始编辑你的 <span class="accent">PDF</span></h2>
+                <p>支持删除页面、插入页面、拖动排序、旋转、提取、合并等操作。<br><em>所有处理均在本地浏览器完成</em>，文件不会上传。</p>
+                <button class="tool-btn primary large" id="btnOpenEmpty">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"/></svg>
+                    <span>选择 PDF 文件</span>
+                </button>
+                <div class="drag-hint">或将 PDF 文件拖放到此处</div>
+            </div>
+
+            <!-- 页面网格 -->
+            <div class="page-grid" id="pageGrid"></div>
+        </section>
+    </main>
+
+    <!-- 插入页面对话框 -->
+    <div class="modal-overlay" id="insertModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>从其他 PDF 插入页面</h2>
+                <button class="icon-btn" id="closeInsertModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="insert-step">
+                    <label class="step-label">1. 选择源 PDF 文件</label>
+                    <button class="tool-btn" id="btnPickSource">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"/></svg>
+                        <span id="sourceFileName">选择文件...</span>
+                    </button>
+                </div>
+                <div class="insert-step" id="sourcePagesStep" style="display:none">
+                    <label class="step-label">2. 选择要插入的页面</label>
+                    <div class="source-pages-grid" id="sourcePagesGrid"></div>
+                    <div class="insert-actions">
+                        <button class="tool-btn small" id="btnSourceSelectAll">全选</button>
+                        <button class="tool-btn small" id="btnSourceSelectNone">取消</button>
+                    </div>
+                </div>
+                <div class="insert-step" id="insertPosStep" style="display:none">
+                    <label class="step-label">3. 插入位置</label>
+                    <div class="insert-position-options">
+                        <label class="radio-label"><input type="radio" name="insertPos" value="before" checked> 在选中页面之前</label>
+                        <label class="radio-label"><input type="radio" name="insertPos" value="after"> 在选中页面之后</label>
+                        <label class="radio-label"><input type="radio" name="insertPos" value="start"> 插入到开头</label>
+                        <label class="radio-label"><input type="radio" name="insertPos" value="end"> 插入到末尾</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="tool-btn" id="cancelInsert">取消</button>
+                <button class="tool-btn primary" id="confirmInsert" disabled>插入页面</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 隐藏文件输入 -->
+    <input type="file" id="fileInput" accept=".pdf,application/pdf" multiple style="display:none">
+    <input type="file" id="sourceFileInput" accept=".pdf,application/pdf" style="display:none">
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PDF-lib -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script>
+/* ===== PDF Forge — 主应用逻辑 ===== */
+
+// 配置 PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const { PDFDocument, degrees } = PDFLib;
+
+// ===== 应用状态 =====
+const state = {
+    files: [],          // 已打开的 PDF 文件 [{id, name, arrayBuffer, pdfDoc, pageCount}]
+    pages: [],          // 当前编辑区的页面 [{id, fileId, pageIndex, rotation, selected}]
+    selectedIds: new Set(),
+    activeFileId: null,
+    zoom: 1,
+    thumbnailCache: new Map(),  // 缓存缩略图 canvas
+    // 插入对话框状态
+    insertState: {
+        sourceFile: null,       // {name, arrayBuffer, pdfDoc, pageCount}
+        sourceSelected: new Set(),
+        renderedCanvases: []
+    }
+};
+
+// ===== DOM 引用 =====
+const $ = (id) => document.getElementById(id);
+const dom = {
+    pageGrid: $('pageGrid'),
+    emptyState: $('emptyState'),
+    fileList: $('fileList'),
+    fileCount: $('fileCount'),
+    fileInput: $('fileInput'),
+    sourceFileInput: $('sourceFileInput'),
+    canvasArea: $('canvasArea'),
+    // 工具栏按钮
+    btnOpen: $('btnOpen'),
+    btnOpenEmpty: $('btnOpenEmpty'),
+    btnInsert: $('btnInsert'),
+    btnDelete: $('btnDelete'),
+    btnRotate: $('btnRotate'),
+    btnDuplicate: $('btnDuplicate'),
+    btnExtract: $('btnExtract'),
+    btnSelectAll: $('btnSelectAll'),
+    btnReverse: $('btnReverse'),
+    btnExport: $('btnExport'),
+    btnZoomIn: $('btnZoomIn'),
+    btnZoomOut: $('btnZoomOut'),
+    zoomLevel: $('zoomLevel'),
+    // 统计
+    statTotal: $('statTotal'),
+    statSelected: $('statSelected'),
+    statFiles: $('statFiles'),
+    // 插入对话框
+    insertModal: $('insertModal'),
+    btnPickSource: $('btnPickSource'),
+    sourceFileName: $('sourceFileName'),
+    sourcePagesStep: $('sourcePagesStep'),
+    sourcePagesGrid: $('sourcePagesGrid'),
+    btnSourceSelectAll: $('btnSourceSelectAll'),
+    btnSourceSelectNone: $('btnSourceSelectNone'),
+    insertPosStep: $('insertPosStep'),
+    closeInsertModal: $('closeInsertModal'),
+    cancelInsert: $('cancelInsert'),
+    confirmInsert: $('confirmInsert'),
+    // Toast
+    toastContainer: $('toastContainer'),
+    // 侧边栏
+    sidebar: $('sidebar'),
+    sidebarResize: $('sidebarResize')
+};
+
+// ===== 工具函数 =====
+function uid() {
+    return Math.random().toString(36).slice(2, 11);
+}
+
+function showToast(message, type = 'info', duration = 3000) {
+    const icons = {
+        success: '✓',
+        error: '✕',
+        info: 'ℹ',
+        warning: '⚠'
+    };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${message}</span>`;
+    dom.toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// ===== PDF 加载 =====
+async function loadPdfFile(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+        const fileObj = {
+            id: uid(),
+            name: file.name,
+            size: file.size,
+            arrayBuffer,
+            pdfDoc,
+            pageCount: pdfDoc.numPages
+        };
+        state.files.push(fileObj);
+        return fileObj;
+    } catch (err) {
+        showToast(`加载失败: ${file.name} - ${err.message}`, 'error');
+        return null;
+    }
+}
+
+// 打开文件并加载到编辑区
+async function openFiles(files) {
+    const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length === 0) {
+        showToast('请选择 PDF 文件', 'warning');
+        return;
+    }
+
+    showToast(`正在加载 ${pdfFiles.length} 个文件...`, 'info', 1500);
+
+    for (const file of pdfFiles) {
+        const fileObj = await loadPdfFile(file);
+        if (fileObj) {
+            // 将所有页面添加到编辑区
+            for (let i = 0; i < fileObj.pageCount; i++) {
+                state.pages.push({
+                    id: uid(),
+                    fileId: fileObj.id,
+                    pageIndex: i,
+                    rotation: 0,
+                    selected: false
+                });
+            }
+            state.activeFileId = fileObj.id;
+        }
+    }
+
+    updateUI();
+    renderPages();
+    showToast(`成功加载 ${pdfFiles.length} 个 PDF 文件`, 'success');
+}
+
+// ===== 渲染缩略图 =====
+async function renderThumbnail(fileId, pageIndex, rotation = 0) {
+    const cacheKey = `${fileId}_${pageIndex}_${rotation}`;
+    if (state.thumbnailCache.has(cacheKey)) {
+        return state.thumbnailCache.get(cacheKey);
+    }
+
+    const file = state.files.find(f => f.id === fileId);
+    if (!file) return null;
+
+    const page = await file.pdfDoc.getPage(pageIndex + 1);
+    const viewport = page.getViewport({ scale: 1 });
+    const targetWidth = 300;
+    const scale = targetWidth / viewport.width;
+    const scaledViewport = page.getViewport({ scale, rotation });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = scaledViewport.width;
+    canvas.height = scaledViewport.height;
+
+    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+
+    state.thumbnailCache.set(cacheKey, canvas);
+    return canvas;
+}
+
+// ===== 渲染页面网格 =====
+async function renderPages() {
+    if (state.pages.length === 0) {
+        dom.emptyState.style.display = 'flex';
+        dom.pageGrid.style.display = 'none';
+        return;
+    }
+
+    dom.emptyState.style.display = 'none';
+    dom.pageGrid.style.display = 'grid';
+    dom.pageGrid.innerHTML = '';
+
+    const thumbWidth = Math.floor(180 * state.zoom);
+
+    for (let i = 0; i < state.pages.length; i++) {
+        const page = state.pages[i];
+        const file = state.files.find(f => f.id === page.fileId);
+        if (!file) continue;
+
+        const card = document.createElement('div');
+        card.className = 'page-card';
+        card.dataset.id = page.id;
+        card.dataset.index = i;
+        card.draggable = true;
+        if (page.selected) card.classList.add('selected');
+        if (page.rotation !== 0) card.classList.add('rotated');
+
+        card.innerHTML = `
+            <div class="page-preview">
+                <div class="loading-spinner"></div>
+            </div>
+            <div class="rotate-badge">${page.rotation}°</div>
+            <div class="page-actions">
+                <button class="page-action-btn" data-action="rotate" title="旋转 90°">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>
+                </button>
+                <button class="page-action-btn danger" data-action="delete" title="删除">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                </button>
+            </div>
+            <div class="page-footer">
+                <span class="page-number">${i + 1}</span>
+                <span class="page-source" title="${file.name}">${file.name}</span>
+            </div>
+        `;
+
+        // 设置缩略图宽度
+        card.style.minWidth = thumbWidth + 'px';
+        dom.pageGrid.appendChild(card);
+
+        // 异步渲染缩略图
+        renderThumbnail(page.fileId, page.pageIndex, page.rotation).then(thumbCanvas => {
+            if (thumbCanvas && card.isConnected) {
+                const preview = card.querySelector('.page-preview');
+                preview.innerHTML = '';
+                const clone = document.createElement('canvas');
+                clone.width = thumbCanvas.width;
+                clone.height = thumbCanvas.height;
+                clone.getContext('2d').drawImage(thumbCanvas, 0, 0);
+                preview.appendChild(clone);
+            }
+        }).catch(err => {
+            const preview = card.querySelector('.page-preview');
+            preview.innerHTML = '<div style="color:#999;font-size:11px;">渲染失败</div>';
+        });
+
+        // 绑定事件
+        attachCardEvents(card, page);
+    }
+
+    updateStats();
+    updateToolbar();
+}
+
+// ===== 页面卡片事件 =====
+function attachCardEvents(card, page) {
+    // 点击选中
+    card.addEventListener('click', (e) => {
+        if (e.target.closest('.page-action-btn')) return;
+        if (e.shiftKey) {
+            // Shift 多选：选中当前到上次选中之间
+            handleShiftClick(page);
+        } else {
+            toggleSelect(page);
+        }
+        updateSelection();
+    });
+
+    // 操作按钮
+    card.querySelectorAll('.page-action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            if (action === 'rotate') {
+                rotatePages([page.id]);
+            } else if (action === 'delete') {
+                state.selectedIds.clear();
+                state.selectedIds.add(page.id);
+                deleteSelected();
+            }
+        });
+    });
+
+    // 拖拽排序
+    card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', page.id);
+        // 如果拖动的页面未选中，则只选中它
+        if (!page.selected) {
+            state.selectedIds.clear();
+            state.selectedIds.add(page.id);
+            updateSelection();
+        }
+    });
+
+    card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.page-card').forEach(c => {
+            c.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+    });
+
+    card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        card.classList.remove('drag-over-top', 'drag-over-bottom');
+        if (e.clientY < midY) {
+            card.classList.add('drag-over-top');
+        } else {
+            card.classList.add('drag-over-bottom');
+        }
+    });
+
+    card.addEventListener('dragleave', () => {
+        card.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+
+    card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (!draggedId) return;
+
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const insertBefore = e.clientY < midY;
+
+        moveSelectedTo(draggedId, page.id, insertBefore);
+        card.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+}
+
+// ===== 选择逻辑 =====
+function toggleSelect(page) {
+    if (page.selected) {
+        page.selected = false;
+        state.selectedIds.delete(page.id);
+    } else {
+        page.selected = true;
+        state.selectedIds.add(page.id);
+    }
+}
+
+function handleShiftClick(page) {
+    const pageIdx = state.pages.findIndex(p => p.id === page.id);
+    if (state.selectedIds.size === 0) {
+        toggleSelect(page);
+        return;
+    }
+    // 找到最近一个已选中的页面
+    let anchorIdx = -1;
+    for (let i = 0; i < state.pages.length; i++) {
+        if (state.pages[i].selected && i !== pageIdx) {
+            anchorIdx = i;
+        }
+    }
+    if (anchorIdx === -1) {
+        toggleSelect(page);
+        return;
+    }
+    const start = Math.min(anchorIdx, pageIdx);
+    const end = Math.max(anchorIdx, pageIdx);
+    for (let i = start; i <= end; i++) {
+        state.pages[i].selected = true;
+        state.selectedIds.add(state.pages[i].id);
+    }
+}
+
+function updateSelection() {
+    document.querySelectorAll('.page-card').forEach(card => {
+        const page = state.pages.find(p => p.id === card.dataset.id);
+        if (page) {
+            card.classList.toggle('selected', page.selected);
+        }
+    });
+    updateStats();
+    updateToolbar();
+}
+
+function selectAll() {
+    const allSelected = state.pages.every(p => p.selected);
+    state.pages.forEach(p => {
+        p.selected = !allSelected;
+        if (p.selected) state.selectedIds.add(p.id);
+        else state.selectedIds.delete(p.id);
+    });
+    updateSelection();
+}
+
+// ===== 拖拽移动页面 =====
+function moveSelectedTo(draggedId, targetId, insertBefore) {
+    const draggedPages = state.pages.filter(p => p.selected);
+    if (draggedPages.length === 0) {
+        const dragged = state.pages.find(p => p.id === draggedId);
+        if (dragged) draggedPages.push(dragged);
+    }
+
+    // 从数组中移除被拖动的页面
+    const remaining = state.pages.filter(p => !p.selected && p.id !== draggedId);
+
+    // 找到目标位置
+    const targetIdx = remaining.findIndex(p => p.id === targetId);
+    if (targetIdx === -1) return;
+
+    const insertIdx = insertBefore ? targetIdx : targetIdx + 1;
+
+    // 插入
+    state.pages = [
+        ...remaining.slice(0, insertIdx),
+        ...draggedPages,
+        ...remaining.slice(insertIdx)
+    ];
+
+    renderPages();
+}
+
+// ===== 页面操作 =====
+function deleteSelected() {
+    if (state.selectedIds.size === 0) return;
+    const count = state.selectedIds.size;
+    state.pages = state.pages.filter(p => !p.selected);
+    state.selectedIds.clear();
+    renderPages();
+    showToast(`已删除 ${count} 页`, 'success');
+}
+
+function rotateSelected() {
+    if (state.selectedIds.size === 0) return;
+    for (const page of state.pages) {
+        if (page.selected) {
+            page.rotation = (page.rotation + 90) % 360;
+            // 清除该页面的缩略图缓存
+            for (const key of [...state.thumbnailCache.keys()]) {
+                if (key.startsWith(`${page.fileId}_${page.pageIndex}_`)) {
+                    state.thumbnailCache.delete(key);
+                }
+            }
+        }
+    }
+    renderPages();
+    showToast(`已旋转 ${state.selectedIds.size} 页`, 'success');
+}
+
+function rotatePages(pageIds) {
+    for (const page of state.pages) {
+        if (pageIds.includes(page.id)) {
+            page.rotation = (page.rotation + 90) % 360;
+            for (const key of [...state.thumbnailCache.keys()]) {
+                if (key.startsWith(`${page.fileId}_${page.pageIndex}_`)) {
+                    state.thumbnailCache.delete(key);
+                }
+            }
+        }
+    }
+    renderPages();
+}
+
+function duplicateSelected() {
+    if (state.selectedIds.size === 0) return;
+    const newPages = [];
+    const newSelection = new Set();
+    for (let i = 0; i < state.pages.length; i++) {
+        newPages.push(state.pages[i]);
+        if (state.pages[i].selected) {
+            const dup = {
+                ...state.pages[i],
+                id: uid(),
+                selected: true
+            };
+            newPages.push(dup);
+            newSelection.add(dup.id);
+        }
+    }
+    state.pages = newPages;
+    state.selectedIds = newSelection;
+    // 取消之前选中的
+    state.pages.forEach(p => {
+        if (!newSelection.has(p.id)) {
+            p.selected = false;
+        }
+    });
+    renderPages();
+    showToast(`已复制 ${state.selectedIds.size} 页`, 'success');
+}
+
+function reverseSelected() {
+    if (state.selectedIds.size < 2) {
+        showToast('至少选择 2 页才能反转', 'warning');
+        return;
+    }
+    // 收集选中页面的索引
+    const indices = [];
+    state.pages.forEach((p, i) => {
+        if (p.selected) indices.push(i);
+    });
+    // 反转这些位置的页面
+    const selectedPages = indices.map(i => state.pages[i]).reverse();
+    indices.forEach((idx, n) => {
+        state.pages[idx] = selectedPages[n];
+    });
+    renderPages();
+    showToast(`已反转 ${indices.length} 页的顺序`, 'success');
+}
+
+// ===== 插入页面对话框 =====
+function openInsertModal() {
+    if (state.files.length === 0) {
+        showToast('请先打开一个 PDF 文件', 'warning');
+        return;
+    }
+    state.insertState.sourceFile = null;
+    state.insertState.sourceSelected.clear();
+    state.insertState.renderedCanvases = [];
+    dom.sourceFileName.textContent = '选择文件...';
+    dom.sourcePagesStep.style.display = 'none';
+    dom.insertPosStep.style.display = 'none';
+    dom.confirmInsert.disabled = true;
+    dom.sourcePagesGrid.innerHTML = '';
+    dom.insertModal.classList.add('active');
+}
+
+function closeInsertModal() {
+    dom.insertModal.classList.remove('active');
+}
+
+async function pickSourceFile(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+        state.insertState.sourceFile = {
+            name: file.name,
+            arrayBuffer,
+            pdfDoc,
+            pageCount: pdfDoc.numPages
+        };
+        dom.sourceFileName.textContent = file.name;
+        dom.sourcePagesStep.style.display = 'block';
+        dom.insertPosStep.style.display = 'block';
+        dom.sourcePagesGrid.innerHTML = '';
+        state.insertState.sourceSelected.clear();
+
+        // 渲染源文件页面
+        for (let i = 0; i < pdfDoc.numPages; i++) {
+            const card = document.createElement('div');
+            card.className = 'source-page-card';
+            card.dataset.pageIndex = i;
+            card.innerHTML = `
+                <div class="loading-spinner" style="width:18px;height:18px;border-width:2px;"></div>
+                <div class="source-page-num">第 ${i + 1} 页</div>
+                <div class="check-mark"></div>
+            `;
+            dom.sourcePagesGrid.appendChild(card);
+
+            // 异步渲染
+            (async () => {
+                try {
+                    const page = await pdfDoc.getPage(i + 1);
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scale = 150 / viewport.width;
+                    const scaledViewport = page.getViewport({ scale });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+                    if (card.isConnected) {
+                        const spinner = card.querySelector('.loading-spinner');
+                        if (spinner) spinner.remove();
+                        card.insertBefore(canvas, card.firstChild);
+                    }
+                } catch (e) {
+                    // 忽略渲染错误
+                }
+            })();
+
+            card.addEventListener('click', () => {
+                if (state.insertState.sourceSelected.has(i)) {
+                    state.insertState.sourceSelected.delete(i);
+                    card.classList.remove('selected');
+                } else {
+                    state.insertState.sourceSelected.add(i);
+                    card.classList.add('selected');
+                }
+                dom.confirmInsert.disabled = state.insertState.sourceSelected.size === 0;
+            });
+        }
+    } catch (err) {
+        showToast(`加载源文件失败: ${err.message}`, 'error');
+    }
+}
+
+async function confirmInsert() {
+    const { sourceFile, sourceSelected } = state.insertState;
+    if (!sourceFile || sourceSelected.size === 0) return;
+
+    const insertPos = document.querySelector('input[name="insertPos"]:checked').value;
+    const sortedIndices = [...sourceSelected].sort((a, b) => a - b);
+
+    // 将源文件加入 files 列表（如果还没加入）
+    let sourceFileObj = state.files.find(f => f.name === sourceFile.name && f.size === sourceFile.arrayBuffer.byteLength);
+    if (!sourceFileObj) {
+        sourceFileObj = {
+            id: uid(),
+            name: sourceFile.name,
+            size: sourceFile.arrayBuffer.byteLength,
+            arrayBuffer: sourceFile.arrayBuffer,
+            pdfDoc: sourceFile.pdfDoc,
+            pageCount: sourceFile.pageCount
+        };
+        state.files.push(sourceFileObj);
+    }
+
+    // 创建新页面对象
+    const newPages = sortedIndices.map(idx => ({
+        id: uid(),
+        fileId: sourceFileObj.id,
+        pageIndex: idx,
+        rotation: 0,
+        selected: false
+    }));
+
+    // 确定插入位置
+    let insertIdx = 0;
+    if (insertPos === 'start') {
+        insertIdx = 0;
+    } else if (insertPos === 'end') {
+        insertIdx = state.pages.length;
+    } else if (insertPos === 'before' || insertPos === 'after') {
+        if (state.selectedIds.size > 0) {
+            const selectedIndices = state.pages
+                .map((p, i) => p.selected ? i : -1)
+                .filter(i => i >= 0);
+            if (selectedIndices.length > 0) {
+                insertIdx = insertPos === 'before' ? selectedIndices[0] : selectedIndices[selectedIndices.length - 1] + 1;
+            } else {
+                insertIdx = state.pages.length;
+            }
+        } else {
+            insertIdx = state.pages.length;
+        }
+    }
+
+    state.pages.splice(insertIdx, 0, ...newPages);
+    closeInsertModal();
+    renderPages();
+    renderFileList();
+    showToast(`已插入 ${newPages.length} 页`, 'success');
+}
+
+// ===== 提取页面 =====
+async function extractSelected() {
+    if (state.selectedIds.size === 0) return;
+    const selectedPages = state.pages.filter(p => p.selected);
+    try {
+        const newPdf = await PDFDocument.create();
+        for (const page of selectedPages) {
+            const file = state.files.find(f => f.id === page.fileId);
+            if (!file) continue;
+            const srcPdf = await PDFDocument.load(file.arrayBuffer);
+            const [copiedPage] = await newPdf.copyPages(srcPdf, [page.pageIndex]);
+            if (page.rotation !== 0) {
+                copiedPage.setRotation(degrees(page.rotation));
+            }
+            newPdf.addPage(copiedPage);
+        }
+        const pdfBytes = await newPdf.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        downloadBlob(blob, `extracted_${selectedPages.length}_pages.pdf`);
+        showToast(`已提取 ${selectedPages.length} 页为新 PDF`, 'success');
+    } catch (err) {
+        showToast(`提取失败: ${err.message}`, 'error');
+    }
+}
+
+// ===== 导出 PDF =====
+async function exportPdf() {
+    if (state.pages.length === 0) return;
+    showToast('正在生成 PDF...', 'info', 2000);
+
+    try {
+        const newPdf = await PDFDocument.create();
+        // 缓存已加载的 PDFDocument
+        const pdfCache = new Map();
+
+        for (const page of state.pages) {
+            const file = state.files.find(f => f.id === page.fileId);
+            if (!file) continue;
+
+            let srcPdf = pdfCache.get(page.fileId);
+            if (!srcPdf) {
+                srcPdf = await PDFDocument.load(file.arrayBuffer);
+                pdfCache.set(page.fileId, srcPdf);
+            }
+            const [copiedPage] = await newPdf.copyPages(srcPdf, [page.pageIndex]);
+            if (page.rotation !== 0) {
+                copiedPage.setRotation(degrees(page.rotation));
+            }
+            newPdf.addPage(copiedPage);
+        }
+
+        const pdfBytes = await newPdf.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        downloadBlob(blob, `pdf_forge_${timestamp}.pdf`);
+        showToast(`成功导出 ${state.pages.length} 页 PDF`, 'success');
+    } catch (err) {
+        showToast(`导出失败: ${err.message}`, 'error');
+    }
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ===== 文件列表渲染 =====
+function renderFileList() {
+    dom.fileList.innerHTML = '';
+    if (state.files.length === 0) {
+        dom.fileList.innerHTML = `
+            <div class="empty-hint">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                <p>点击「打开 PDF」<br>或拖放文件到此处</p>
+            </div>
+        `;
+        return;
+    }
+
+    state.files.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        if (file.id === state.activeFileId) item.classList.add('active');
+        item.innerHTML = `
+            <div class="file-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            </div>
+            <div class="file-info">
+                <div class="file-name" title="${file.name}">${file.name}</div>
+                <div class="file-meta">${file.pageCount} 页 · ${formatBytes(file.size)}</div>
+            </div>
+            <button class="file-remove icon-btn" title="移除文件">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        `;
+
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.file-remove')) return;
+            state.activeFileId = file.id;
+            renderFileList();
+        });
+
+        item.querySelector('.file-remove').addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeFile(file.id);
+        });
+
+        dom.fileList.appendChild(item);
+    });
+}
+
+function removeFile(fileId) {
+    const file = state.files.find(f => f.id === fileId);
+    if (!file) return;
+    const pageCount = state.pages.filter(p => p.fileId === fileId).length;
+    state.files = state.files.filter(f => f.id !== fileId);
+    state.pages = state.pages.filter(p => p.fileId !== fileId);
+    state.selectedIds.clear();
+    // 清除缓存
+    for (const key of [...state.thumbnailCache.keys()]) {
+        if (key.startsWith(`${fileId}_`)) {
+            state.thumbnailCache.delete(key);
+        }
+    }
+    if (state.activeFileId === fileId) {
+        state.activeFileId = state.files[0]?.id || null;
+    }
+    updateUI();
+    renderPages();
+    showToast(`已移除文件 ${file.name}（${pageCount} 页）`, 'info');
+}
+
+// ===== UI 更新 =====
+function updateUI() {
+    renderFileList();
+    updateStats();
+    updateToolbar();
+}
+
+function updateStats() {
+    dom.statTotal.textContent = state.pages.length;
+    dom.statSelected.textContent = state.selectedIds.size;
+    dom.statFiles.textContent = state.files.length;
+    dom.fileCount.textContent = state.files.length;
+}
+
+function updateToolbar() {
+    const hasPages = state.pages.length > 0;
+    const hasSelection = state.selectedIds.size > 0;
+    dom.btnDelete.disabled = !hasSelection;
+    dom.btnRotate.disabled = !hasSelection;
+    dom.btnDuplicate.disabled = !hasSelection;
+    dom.btnExtract.disabled = !hasSelection;
+    dom.btnSelectAll.disabled = !hasPages;
+    dom.btnReverse.disabled = state.selectedIds.size < 2;
+    dom.btnExport.disabled = !hasPages;
+    dom.btnInsert.disabled = !hasPages;
+}
+
+// ===== 缩放 =====
+function setZoom(delta) {
+    state.zoom = Math.max(0.5, Math.min(2, state.zoom + delta));
+    dom.zoomLevel.textContent = Math.round(state.zoom * 100) + '%';
+    const thumbWidth = Math.floor(180 * state.zoom);
+    document.documentElement.style.setProperty('--thumb-size', thumbWidth + 'px');
+    document.querySelectorAll('.page-card').forEach(card => {
+        card.style.minWidth = thumbWidth + 'px';
+    });
+}
+
+// ===== 事件绑定 =====
+function bindEvents() {
+    // 打开文件
+    dom.btnOpen.addEventListener('click', () => dom.fileInput.click());
+    dom.btnOpenEmpty.addEventListener('click', () => dom.fileInput.click());
+    dom.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            openFiles(e.target.files);
+            e.target.value = '';
+        }
+    });
+
+    // 插入
+    dom.btnInsert.addEventListener('click', openInsertModal);
+    dom.closeInsertModal.addEventListener('click', closeInsertModal);
+    dom.cancelInsert.addEventListener('click', closeInsertModal);
+    dom.insertModal.addEventListener('click', (e) => {
+        if (e.target === dom.insertModal) closeInsertModal();
+    });
+    dom.btnPickSource.addEventListener('click', () => dom.sourceFileInput.click());
+    dom.sourceFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            pickSourceFile(e.target.files[0]);
+            e.target.value = '';
+        }
+    });
+    dom.btnSourceSelectAll.addEventListener('click', () => {
+        if (!state.insertState.sourceFile) return;
+        for (let i = 0; i < state.insertState.sourceFile.pageCount; i++) {
+            state.insertState.sourceSelected.add(i);
+        }
+        document.querySelectorAll('.source-page-card').forEach(c => c.classList.add('selected'));
+        dom.confirmInsert.disabled = false;
+    });
+    dom.btnSourceSelectNone.addEventListener('click', () => {
+        state.insertState.sourceSelected.clear();
+        document.querySelectorAll('.source-page-card').forEach(c => c.classList.remove('selected'));
+        dom.confirmInsert.disabled = true;
+    });
+    dom.confirmInsert.addEventListener('click', confirmInsert);
+
+    // 页面操作
+    dom.btnDelete.addEventListener('click', deleteSelected);
+    dom.btnRotate.addEventListener('click', rotateSelected);
+    dom.btnDuplicate.addEventListener('click', duplicateSelected);
+    dom.btnExtract.addEventListener('click', extractSelected);
+    dom.btnSelectAll.addEventListener('click', selectAll);
+    dom.btnReverse.addEventListener('click', reverseSelected);
+    dom.btnExport.addEventListener('click', exportPdf);
+
+    // 缩放
+    dom.btnZoomIn.addEventListener('click', () => setZoom(0.1));
+    dom.btnZoomOut.addEventListener('click', () => setZoom(-0.1));
+
+    // 拖放文件到画布区
+    dom.canvasArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.types.includes('Files')) {
+            dom.canvasArea.classList.add('drag-over');
+        }
+    });
+    dom.canvasArea.addEventListener('dragleave', (e) => {
+        if (e.target === dom.canvasArea) {
+            dom.canvasArea.classList.remove('drag-over');
+        }
+    });
+    dom.canvasArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.canvasArea.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            openFiles(e.dataTransfer.files);
+        }
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (state.selectedIds.size > 0) {
+                e.preventDefault();
+                deleteSelected();
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'a') {
+                e.preventDefault();
+                selectAll();
+            } else if (e.key === 's') {
+                e.preventDefault();
+                if (state.pages.length > 0) exportPdf();
+            }
+        } else if (e.key === 'Escape') {
+            if (dom.insertModal.classList.contains('active')) {
+                closeInsertModal();
+            } else {
+                state.selectedIds.clear();
+                state.pages.forEach(p => p.selected = false);
+                updateSelection();
+            }
+        }
+    });
+
+    // 侧边栏拖动调整宽度
+    let isResizing = false;
+    dom.sidebarResize.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const newWidth = Math.max(220, Math.min(500, e.clientX));
+        dom.sidebar.style.width = newWidth + 'px';
+        dom.sidebar.style.minWidth = newWidth + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+        }
+    });
+
+    // 阻止默认拖放行为
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => e.preventDefault());
+}
+
+// ===== 初始化 =====
+function init() {
+    bindEvents();
+    updateUI();
+    console.log('%cPDF Forge 已就绪', 'color: #d97757; font-size: 14px; font-weight: bold; font-family: Poppins;');
+}
+
+init();
+</script>
+</body>
+</html>

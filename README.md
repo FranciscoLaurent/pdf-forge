@@ -21,6 +21,8 @@
 
 一个完全在浏览器本地运行的 PDF 编辑工具，**单 HTML 文件**即可使用，无需服务器、无需安装、无需上传文件，所有操作均在本地完成。
 
+> 🌐 **在线体验：** [FranciscoLaurent.github.io/pdf-forge](https://FranciscoLaurent.github.io/pdf-forge/) — 无需下载，打开即用
+
 采用 Anthropic 品牌风格设计，界面简洁优雅，支持常见的 PDF 页面编辑操作。
 
 ![PDF Forge 演示](demo.gif)
