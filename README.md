@@ -1,9 +1,15 @@
 # PDF Forge — 三轮对话直出的本地 PDF 编辑器
 
-![GitHub stars](https://img.shields.io/github/stars/FranciscoLaurent/pdf-forge?style=social)
-![GitHub forks](https://img.shields.io/github/forks/FranciscoLaurent/pdf-forge?style=social)
-![GitHub license](https://img.shields.io/github/license/FranciscoLaurent/pdf-forge)
-![GitHub repo size](https://img.shields.io/github/repo-size/FranciscoLaurent/pdf-forge)
+<p align="center">
+  <img src="social-preview.png" alt="PDF Forge - 浏览器里的 PDF 工具箱" width="800">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/stars/FranciscoLaurent/pdf-forge?style=social" alt="Stars">
+  <img src="https://img.shields.io/github/forks/FranciscoLaurent/pdf-forge?style=social" alt="Forks">
+  <img src="https://img.shields.io/github/license/FranciscoLaurent/pdf-forge" alt="License">
+  <img src="https://img.shields.io/github/repo-size/FranciscoLaurent/pdf-forge" alt="Size">
+</p>
 
 > 🚀 **从需求到成品仅用 3 轮 AI 对话完成开发：核心功能 → 单文件封装 → UI 美化，全程 Vibe Coding 零手写代码。**
 
