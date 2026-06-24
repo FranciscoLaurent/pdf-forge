@@ -1,0 +1,30 @@
+# Claude 配置
+.claude/
+
+# 录屏中间文件
+_demo_frames/
+_demo_raw.webm
+_palette.png
+
+# 封面源文件（已生成 social-preview.png）
+cover.html
+
+# 生成脚本
+_make_*.py
+_record_demo.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
