@@ -1,5 +1,11 @@
 # PDF Forge — 三轮对话直出的本地 PDF 编辑器
 
+<p align="right">
+  <a href="README.md"><img src="https://img.shields.io/badge/中文-当前页-red?style=for-the-badge" alt="中文"></a>
+  <a href="README.en.md"><img src="https://img.shields.io/badge/English-English-blue?style=for-the-badge" alt="English"></a>
+  <a href="README.ja.md"><img src="https://img.shields.io/badge/日本語-Japanese-green?style=for-the-badge" alt="日本語"></a>
+</p>
+
 <p align="center">
   <img src="social-preview.png" alt="PDF Forge - 浏览器里的 PDF 工具箱" width="800">
 </p>
